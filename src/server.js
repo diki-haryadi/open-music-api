@@ -83,7 +83,7 @@ const init = async () => {
     {
       plugin: playlists,
       options: {
-        service: new PlaylistsService(pool),
+        service: new PlaylistsService(pool, new SongsService()),
         validator: Validator,
       },
     },
@@ -93,8 +93,18 @@ const init = async () => {
     const { response } = request;
 
     if (response instanceof Error) {
-      // Handle client errors
+      // Handle authentication errors
+      if (response.message === 'Missing authentication' || response.message === 'Invalid token' || response.name === 'AuthenticationError') {
+        console.error('Authentication Error:', response);
+        return h.response({
+          status: 'fail',
+          message: response.message,
+        }).code(401);
+      }
+
+      // Handle other client errors
       if (response instanceof ClientError) {
+        console.error('Client Error:', response);
         return h.response({
           status: 'fail',
           message: response.message,
@@ -102,11 +112,16 @@ const init = async () => {
       }
 
       // Handle server errors
-      console.error(response);
+      console.error('Server Error:', response);
       return h.response({
         status: 'error',
         message: 'terjadi kegagalan pada server kami',
       }).code(500);
+    }
+
+    // Log responses with status code > 200
+    if (response.statusCode > 200) {
+      console.error(`Response Status ${response.statusCode}:`, response.source);
     }
 
     return h.continue;

@@ -1,6 +1,7 @@
 const { nanoid } = require('nanoid');
 const InvariantError = require('../exceptions/InvariantError');
 const NotFoundError = require('../exceptions/NotFoundError');
+const AuthorizationError = require('../exceptions/AuthorizationError');
 
 class PlaylistsService {
   constructor(pool, songsService) {
@@ -96,7 +97,7 @@ class PlaylistsService {
 
     const playlist = result.rows[0];
     if (playlist.owner !== owner) {
-      throw new InvariantError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
     }
   }
 
@@ -107,11 +108,7 @@ class PlaylistsService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      try {
-        await this._collaborationService.verifyCollaborator(playlistId, userId);
-      } catch {
-        throw error;
-      }
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
     }
   }
 
@@ -128,8 +125,9 @@ class PlaylistsService {
       text: `SELECT songs.id, songs.title, songs.performer
             FROM songs
             JOIN playlist_songs ON songs.id = playlist_songs.song_id
-            WHERE playlist_songs.playlist_id = $1`,
-      values: [playlistId],
+            JOIN playlists ON playlists.id = playlist_songs.playlist_id
+            WHERE playlist_songs.playlist_id = $1 AND playlists.owner = $2`,
+      values: [playlistId, owner],
     };
 
     const playlistResult = await this._pool.query(playlistQuery);

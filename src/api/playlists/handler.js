@@ -54,20 +54,32 @@ class PlaylistsHandler {
   }
 
   async postSongToPlaylistHandler(request, h) {
-    this._validator.validatePlaylistSongPayload(request.payload);
-    const { songId } = request.payload;
-    const { id: playlistId } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+    try {
+      this._validator.validatePlaylistSongPayload(request.payload);
+      const { songId } = request.payload;
+      const { id: playlistId } = request.params;
+      const { id: credentialId } = request.auth.credentials;
 
-    await this._service.verifyPlaylistAccess(playlistId, credentialId);
-    await this._service.addSongToPlaylist(playlistId, songId);
+      await this._service.verifyPlaylistAccess(playlistId, credentialId);
+      await this._service.addSongToPlaylist(playlistId, songId);
 
-    const response = h.response({
-      status: 'success',
-      message: 'Lagu berhasil ditambahkan ke playlist',
-    });
-    response.code(201);
-    return response;
+      const response = h.response({
+        status: 'success',
+        message: 'Lagu berhasil ditambahkan ke playlist',
+      });
+      response.code(201);
+      return response;
+    } catch (error) {
+      if (error.name === 'NotFoundError') {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(404);
+        return response;
+      }
+      throw error;
+    }
   }
 
   async getSongsFromPlaylistHandler(request) {

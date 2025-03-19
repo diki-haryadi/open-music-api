@@ -11,54 +11,90 @@ class AuthenticationsHandler {
   }
 
   async postAuthenticationHandler(request, h) {
-    this._validator.validatePostAuthenticationPayload(request.payload);
+    try {
+      this._validator.validatePostAuthenticationPayload(request.payload);
 
-    const { username, password } = request.payload;
-    const id = await this._usersService.verifyUserCredential(username, password);
+      const { username, password } = request.payload;
+      const id = await this._usersService.verifyUserCredential(username, password);
 
-    const accessToken = this._tokenManager.generateAccessToken({ userId: id });
-    const refreshToken = this._tokenManager.generateRefreshToken({ userId: id });
+      const accessToken = this._tokenManager.generateAccessToken({ userId: id });
+      const refreshToken = this._tokenManager.generateRefreshToken({ userId: id });
 
-    await this._authenticationsService.addRefreshToken(refreshToken);
+      await this._authenticationsService.addRefreshToken(refreshToken);
 
-    const response = h.response({
-      status: 'success',
-      data: {
-        accessToken,
-        refreshToken,
-      },
-    });
-    response.code(201);
-    return response;
+      const response = h.response({
+        status: 'success',
+        data: {
+          accessToken,
+          refreshToken,
+        },
+      });
+      response.code(201);
+      return response;
+    } catch (error) {
+      if (error.name === 'AuthenticationError' || error.message === 'Invalid token structure') {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(401);
+        return response;
+      }
+      throw error;
+    }
   }
 
   async putAuthenticationHandler(request) {
-    this._validator.validatePutAuthenticationPayload(request.payload);
+    try {
+      this._validator.validatePutAuthenticationPayload(request.payload);
 
-    const { refreshToken } = request.payload;
-    await this._authenticationsService.verifyRefreshToken(refreshToken);
-    const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
+      const { refreshToken } = request.payload;
+      await this._authenticationsService.verifyRefreshToken(refreshToken);
+      const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
 
-    const accessToken = this._tokenManager.generateAccessToken({ id });
-    return {
-      status: 'success',
-      data: {
-        accessToken,
-      },
-    };
+      const accessToken = this._tokenManager.generateAccessToken({ id });
+      return {
+        status: 'success',
+        data: {
+          accessToken,
+        },
+      };
+    } catch (error) {
+      if (error.name === 'AuthenticationError') {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(401);
+        return response;
+      }
+      throw error;
+    }
   }
 
   async deleteAuthenticationHandler(request) {
-    this._validator.validateDeleteAuthenticationPayload(request.payload);
+    try {
+      this._validator.validateDeleteAuthenticationPayload(request.payload);
 
-    const { refreshToken } = request.payload;
-    await this._authenticationsService.verifyRefreshToken(refreshToken);
-    await this._authenticationsService.deleteRefreshToken(refreshToken);
+      const { refreshToken } = request.payload;
+      await this._authenticationsService.verifyRefreshToken(refreshToken);
+      await this._authenticationsService.deleteRefreshToken(refreshToken);
 
-    return {
-      status: 'success',
-      message: 'Refresh token berhasil dihapus',
-    };
+      return {
+        status: 'success',
+        message: 'Refresh token berhasil dihapus',
+      };
+    } catch (error) {
+      if (error.name === 'AuthenticationError') {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(401);
+        return response;
+      }
+      throw error;
+    }
   }
 }
 
