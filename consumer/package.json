@@ -1,0 +1,19 @@
+{
+  "name": "open-music-consumer",
+  "version": "1.0.0",
+  "description": "Consumer service for Open Music API",
+  "main": "src/consumer.js",
+  "scripts": {
+    "start": "node src/consumer.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "dotenv": "^16.5.0",
+    "nanoid": "^3.3.6",
+    "nodemailer": "^6.9.7",
+    "pg": "^8.11.3"
+  }
+}
