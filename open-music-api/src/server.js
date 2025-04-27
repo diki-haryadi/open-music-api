@@ -27,6 +27,13 @@ const init = async () => {
       cors: {
         origin: ['*'],
       },
+      // payload: {
+      //   maxBytes: 1024 * 1024 * 10, // 10MB limit for file uploads
+      //   parse: true,
+      //   allow: 'multipart/form-data',
+      //   multipart: true,
+      //   output: 'stream'
+      // }
     },
   });
 

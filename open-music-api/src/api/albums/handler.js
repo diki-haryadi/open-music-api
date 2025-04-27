@@ -12,7 +12,14 @@ class AlbumsHandler {
   async postAlbumCoverHandler(request, h) {
     const { id } = request.params;
     const { cover } = request.payload;
-    this._validator.validateAlbumCover(cover.hapi.headers);
+    
+    // Ensure content-length is included in headers for validation
+    const headers = {
+      ...cover.hapi.headers,
+      'content-length': parseInt(cover.hapi.headers['content-length'] || 0, 10),
+    };
+    
+    this._validator.validateAlbumCover(headers);
 
     const filename = await this._service.uploadAlbumCover(cover, id);
 

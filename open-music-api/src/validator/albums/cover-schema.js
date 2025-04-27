@@ -10,7 +10,7 @@ const ImageHeadersSchema = Joi.object({
     'image/webp',
     'image/svg+xml'
   ).required(),
-  'content-length': Joi.number().max(512000).required(),
+  'content-length': Joi.number().max(512000),
 }).unknown();
 
 module.exports = { ImageHeadersSchema };

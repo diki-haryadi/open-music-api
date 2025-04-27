@@ -30,8 +30,21 @@ class AlbumsService {
   }
 
   async uploadAlbumCover(cover, albumId) {
-    const filename = `album-${nanoid(16)}`;
-    const fileLocation = `http://localhost:5000/uploads/images/${filename}`;
+    const fs = require('fs');
+    const path = require('path');
+    const { pipeline } = require('stream/promises');
+    const StorageConfig = require('../config/storage');
+
+    const filename = `album-${nanoid(16)}${path.extname(cover.hapi.filename)}`;
+    const fileLocation = `${StorageConfig.baseUrl}/uploads/images/${filename}`;
+    const filePath = path.resolve(StorageConfig.uploadPath, filename);
+
+    // Ensure upload directory exists
+    await fs.promises.mkdir(StorageConfig.uploadPath, { recursive: true });
+
+    // Create write stream and pipe the file data
+    const fileStream = fs.createWriteStream(filePath);
+    await pipeline(cover, fileStream);
 
     const query = {
       text: 'UPDATE albums SET cover_url = $1 WHERE id = $2 RETURNING id',
@@ -41,6 +54,8 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
+      // Clean up uploaded file if album not found
+      await fs.promises.unlink(filePath);
       throw new NotFoundError('Album tidak ditemukan');
     }
 
