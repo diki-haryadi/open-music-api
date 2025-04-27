@@ -13,11 +13,13 @@ const AlbumsService = require('./services/AlbumsService');
 const UsersService = require('./services/UserService');
 const PlaylistsService = require('./services/PlaylistsService');
 const ProducerService = require('./services/ProducerService');
+const CacheService = require('./services/CacheService');
 const ExportsValidator = require('./validator/exports');
 const pool = require('./services/postgres/pool');
 const Validator = require('./validator/validator');
 const ClientError = require('./exceptions/ClientError');
 const Jwt = require('@hapi/jwt');
+const Inert = require('@hapi/inert');
 
 const init = async () => {
   const server = Hapi.server({
@@ -27,22 +29,23 @@ const init = async () => {
       cors: {
         origin: ['*'],
       },
-      // payload: {
-      //   maxBytes: 1024 * 1024 * 10, // 10MB limit for file uploads
-      //   parse: true,
-      //   allow: 'multipart/form-data',
-      //   multipart: true,
-      //   output: 'stream'
-      // }
     },
   });
 
   const producerService = new ProducerService();
   await producerService.init();
 
+  const cacheService = new CacheService();
+
   await server.register([{
     plugin: Jwt,
   }]);
+
+  await server.register([
+    {
+      plugin: Inert
+    },
+  ]);
 
   server.auth.strategy('openmusic_jwt', 'jwt', {
     keys: process.env.ACCESS_TOKEN_KEY,
@@ -75,6 +78,7 @@ const init = async () => {
       options: {
         service: new AlbumsService(),
         validator: Validator,
+        cacheService,
       },
     },
     {

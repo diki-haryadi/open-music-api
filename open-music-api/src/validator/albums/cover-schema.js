@@ -8,7 +8,8 @@ const ImageHeadersSchema = Joi.object({
     'image/jpeg',
     'image/png',
     'image/webp',
-    'image/svg+xml'
+    'image/svg+xml',
+    'image/jpg'
   ).required(),
   'content-length': Joi.number().max(512000),
 }).unknown();

@@ -13,29 +13,30 @@ class AlbumsHandler {
     const { id } = request.params;
     const { cover } = request.payload;
     
-    // Ensure content-length is included in headers for validation
-    const headers = {
-      ...cover.hapi.headers,
-      'content-length': parseInt(cover.hapi.headers['content-length'] || 0, 10),
-    };
+    // Ensure cover exists
+    if (!cover) {
+        throw new Error('No file uploaded');
+    }
     
-    this._validator.validateAlbumCover(headers);
+    // Validate file headers if needed
+    this._validator.validateAlbumCover(cover.hapi.headers);
 
     const filename = await this._service.uploadAlbumCover(cover, id);
 
     const response = h.response({
-      status: 'success',
-      message: 'Sampul berhasil diunggah',
+        status: 'success',
+        message: 'Sampul berhasil diunggah',
     });
     response.code(201);
     return response;
-  }
+}
 
   async postAlbumHandler(request, h) {
     this._validator.validateAlbumPayload(request.payload);
     const { name, year } = request.payload;
 
     const albumId = await this._service.addAlbum({ name, year });
+    await this._cacheService.delete(`album:${albumId}`);
 
     const response = h.response({
       status: 'success',
@@ -47,20 +48,39 @@ class AlbumsHandler {
     return response;
   }
 
-  async getAlbumByIdHandler(request) {
+  async getAlbumByIdHandler(request, h) {
     const { id } = request.params;
-    const album = await this._service.getAlbumById(id);
-    const songs = await this._service.getSongsByAlbumId(id);
-
-    return {
-      status: 'success',
-      data: {
-        album: {
-          ...album,
-          songs,
+    try {
+      const result = await this._cacheService.get(`album:${id}`);
+      const response = h.response({
+        status: 'success',
+        data: {
+          album: JSON.parse(result),
         },
-      },
-    };
+      });
+      response.header('X-Data-Source', 'cache');
+      return response;
+    } catch (error) {
+      const album = await this._service.getAlbumById(id);
+      const songs = await this._service.getSongsByAlbumId(id);
+      const albumData = {
+        ...album,
+        songs,
+      };
+      await this._cacheService.set(
+        `album:${id}`,
+        JSON.stringify(albumData),
+        1800
+      );
+      const response = h.response({
+        status: 'success',
+        data: {
+          album: albumData,
+        },
+      });
+      response.header('X-Data-Source', 'database');
+      return response;
+    }
   }
 
   async putAlbumByIdHandler(request) {
@@ -68,6 +88,7 @@ class AlbumsHandler {
     const { id } = request.params;
 
     await this._service.editAlbumById(id, request.payload);
+    await this._cacheService.delete(`album:${id}`);
 
     return {
       status: 'success',
@@ -78,6 +99,7 @@ class AlbumsHandler {
   async deleteAlbumByIdHandler(request, h) {
     const { id } = request.params;
     await this._service.deleteAlbumById(id);
+    await this._cacheService.delete(`album:${id}`);
 
     return {
       status: 'success',
