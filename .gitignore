@@ -1,3 +1,5 @@
 open-music-api/node_modules/
 consumer/node_modules/
 open-music-api/uploads/
+open-music-api/.env
+consumer/.env
